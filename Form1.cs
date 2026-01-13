@@ -9,6 +9,7 @@ public partial class Form1 : Form
     private Label statusLabel;
     private vJoy joystick;
     private uint deviceId = 1;
+    private TrackBar sensitivitySlider;
 
     public Form1()
     {
@@ -21,6 +22,15 @@ public partial class Form1 : Form
         mainTimer.Tick += MainTimer_Tick;
 
         refreshBtn.Click += (s, e) => RefreshWindowList();
+
+        sensitivitySlider = new TrackBar { 
+            Location = new Point(10, 80), 
+            Minimum = 1, 
+            Maximum = 10, 
+            Value = 1, // 1 is linear, higher is more aggressive
+            Width = 250 
+        };
+        this.Controls.Add(sensitivitySlider);
 
         this.Controls.Add(windowComboBox);
         this.Controls.Add(refreshBtn);
@@ -70,19 +80,23 @@ public partial class Form1 : Form
                 // Clamp between 0.0 and 1.0
                 float clampedRatio = Math.Clamp(rawRatio, 0f, 1f);
 
-                // Add a tiny deadzone to compensate for human error
-                if (Math.Abs(clampedRatio - 0.5f) < 0.02f) {
-                    clampedRatio = 0.5f;
-                }
+                // Convert 0.0-1.0 to -1.0 to 1.0 range
+                float centered = (clampedRatio - 0.5f) * 2f;
 
-                statusLabel.Text = $"Steering: {clampedRatio:P0}";
+                // If slider is 1, it stays linear. If higher, it pushes values outward.
+                float sensitivity = sensitivitySlider.Value;
+                float curved = (float)(Math.Sign(centered) * Math.Pow(Math.Abs(centered), 1.0 / sensitivity));
+
                 
-                // 1. Map 0.0-1.0 to 1-32767 (vJoy doesn't like 0 for some reason)
-                int vJoyValue = (int)(clampedRatio * 32767);
+                // Convert back to 0.0-1.0 range
+                float finalRatio = (curved + 1f) / 2f;
+                // --------------------------------
+
+                statusLabel.Text = $"Steering: {finalRatio:P0} (Raw: {clampedRatio:P0})";
+                
+                int vJoyValue = (int)(finalRatio * 32767);
                 if (vJoyValue < 1) vJoyValue = 1;
 
-                // 2. Set the X Axis (HID_USAGE_X is the standard for Steering)
-                // The parameters are: (Value, DeviceID, Usage)
                 joystick.SetAxis(vJoyValue, deviceId, HID_USAGES.HID_USAGE_X);
             }
         }
