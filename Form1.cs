@@ -86,11 +86,9 @@ public partial class Form1 : Form
                 // If slider is 1, it stays linear. If higher, it pushes values outward.
                 float sensitivity = sensitivitySlider.Value;
                 float curved = (float)(Math.Sign(centered) * Math.Pow(Math.Abs(centered), 1.0 / sensitivity));
-
                 
                 // Convert back to 0.0-1.0 range
                 float finalRatio = (curved + 1f) / 2f;
-                // --------------------------------
 
                 statusLabel.Text = $"Steering: {finalRatio:P0} (Raw: {clampedRatio:P0})";
                 
